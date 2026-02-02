@@ -61,7 +61,7 @@ export function UserDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {branding?.logo_url && (
-                <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center overflow-hidden rounded">
+                <div className="w-[120px] h-[120px] flex-shrink-0 flex items-center justify-center overflow-hidden rounded">
                   <img
                     src={resolveLogoUrl(branding.logo_url)}
                     alt={branding.company_name || 'Logo'}
