@@ -2,6 +2,7 @@
 Numerology Calculator - FastAPI Backend
 """
 from dotenv import load_dotenv
+import os
 load_dotenv()
 
 from fastapi import FastAPI
@@ -70,4 +71,5 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", "8003"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

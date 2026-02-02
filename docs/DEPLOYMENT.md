@@ -105,10 +105,10 @@ Test run:
 
 ```bash
 source venv/bin/activate
-uvicorn main:app --host 127.0.0.1 --port 8000
+uvicorn main:app --host 127.0.0.1 --port 8003
 ```
 
-From another terminal: `curl http://127.0.0.1:8000/health` → `{"status":"healthy"}`. Then stop with Ctrl+C.
+From another terminal: `curl http://127.0.0.1:8003/health` → `{"status":"healthy"}`. Then stop with Ctrl+C.
 
 ---
 
@@ -151,7 +151,7 @@ User=YOUR_APP_USER
 Group=YOUR_APP_USER
 WorkingDirectory=/path/to/OPT/numerology/backend
 Environment="PATH=/path/to/OPT/numerology/backend/venv/bin"
-ExecStart=/path/to/OPT/numerology/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+ExecStart=/path/to/OPT/numerology/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8003
 Restart=always
 RestartSec=5
 
@@ -315,9 +315,9 @@ sudo systemctl restart numerology-backend
 | 4 | Create DB `numerology_msp`, user, run `schema.sql` |
 | 5 | Backend: venv, `pip install`, `.env` (DB, SECRET_KEY, SUBDOMAIN_BASE_DOMAIN, ADMIN_SUBDOMAIN) |
 | 6 | Run `create_super_admin.py`; create tenant **sneha** via Super Admin UI |
-| 7 | Systemd service for uvicorn on 127.0.0.1:8000 |
+| 7 | Systemd service for uvicorn on 127.0.0.1:8003 |
 | 8 | Frontend: `npm ci` and `npm run build` (with `VITE_API_BASE_URL` if you call backend by hostname) |
-| 9 | Nginx: backend → :8000, frontend → `OPT/numerology/frontend/dist` for admin/sneha (and `/api` proxy if needed) |
+| 9 | Nginx: backend → :8003, frontend → `OPT/numerology/frontend/dist` for admin/sneha (and `/api` proxy if needed) |
 | 10 | Certbot for HTTPS |
 | 11 | Optional: tighten CORS and restart backend |
 

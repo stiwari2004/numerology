@@ -17,9 +17,9 @@ if (-not $env:VIRTUAL_ENV) {
 }
 
 Write-Host ""
-Write-Host "Starting server on http://localhost:8000" -ForegroundColor Cyan
+Write-Host "Starting server on http://localhost:8003" -ForegroundColor Cyan
 Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Yellow
 Write-Host ""
 
 # Start uvicorn server
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8003

@@ -18,7 +18,7 @@ pip install -r requirements.txt
 
 3. **Run the server:**
 ```powershell
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8003
 ```
 
 Or:
@@ -36,7 +36,7 @@ python main.py
 ## Example Request
 
 ```bash
-POST http://localhost:8000/api/v1/numerology/calculate
+POST http://localhost:8003/api/v1/numerology/calculate
 Content-Type: application/json
 
 {
