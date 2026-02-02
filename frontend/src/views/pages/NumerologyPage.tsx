@@ -317,8 +317,8 @@ export function NumerologyPage() {
                                             <span className="text-red-900 font-semibold">{monthGrid.maha_number || 'N/A'}</span>
                                           </div>
                                           <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-900 rounded border border-blue-900">
-                                            <span className="font-medium text-blue-200">AD:</span>
-                                            <span className="text-blue-100 font-semibold">{yearGrid.antar_number}</span>
+                                            <span className="font-medium text-white">AD:</span>
+                                            <span className="text-white font-semibold">{yearGrid.antar_number}</span>
                                           </div>
                                           <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-50 rounded border border-purple-200">
                                             <span className="font-medium text-purple-700">PD:</span>
@@ -332,6 +332,7 @@ export function NumerologyPage() {
                                         rootNumber={result.root_number}
                                         destinyNumber={result.destiny_number}
                                         mahadasha={monthGrid.maha_number}
+                                        antardasha={yearGrid.antar_number}
                                         pratyantar={monthGrid.antar_number}
                                         isPeriodGrid={true}
                                       />

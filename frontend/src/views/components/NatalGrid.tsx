@@ -92,6 +92,7 @@ export function NatalGrid({
       const digit = digits[i];
       const isLast = i === totalDigits - 1;
       const isSecondToLast = i === totalDigits - 2;
+      const isThirdToLast = i === totalDigits - 3;
       
       let colorClass = "text-slate-800"; // Default
       
@@ -103,9 +104,16 @@ export function NatalGrid({
           colorClass = "text-blue-900 font-bold"; // Dark blue for Antardasha
         }
       }
-      // Second-to-last digit: Mahadasha (if matches) - Red
-      else if (isSecondToLast && matchesMahadasha && totalDigits >= 2) {
-        colorClass = "text-red-600 font-bold"; // Red for Mahadasha
+      // Period grid: second-to-last digit = Antardasha (AD) - Blue
+      else if (isPeriodGrid && isSecondToLast && matchesAntardasha && totalDigits >= 2) {
+        colorClass = "text-blue-600 font-bold"; // Blue for AD in period grid
+      }
+      // Annual grid: second-to-last digit = Mahadasha (MD) - Red. Period grid: third-to-last = Mahadasha
+      else if (!isPeriodGrid && isSecondToLast && matchesMahadasha && totalDigits >= 2) {
+        colorClass = "text-red-600 font-bold"; // Red for Mahadasha (annual)
+      }
+      else if (isPeriodGrid && isThirdToLast && matchesMahadasha && totalDigits >= 3) {
+        colorClass = "text-red-600 font-bold"; // Red for Mahadasha in period grid
       }
       // If Mahadasha matches position (standalone or in earlier position) - Red
       else if (matchesMahadasha && positionNumber === mahadasha) {
@@ -172,6 +180,12 @@ export function NatalGrid({
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 rounded bg-blue-900 border border-blue-900"></div>
               <span className="text-slate-700">Antar: {antardasha}</span>
+            </div>
+          )}
+          {antardasha !== null && isPeriod && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded bg-blue-200 border border-blue-400"></div>
+              <span className="text-slate-700">AD: {antardasha}</span>
             </div>
           )}
           {pratyantar !== null && isPeriod && (
