@@ -55,10 +55,11 @@ class TenantService:
                 "usage_percentage": 0
             }
 
-        # Count active users
+        # Count active users that consume a license (exclude tenant admins)
         used_licenses = db.query(func.count(User.id)).filter(
             User.tenant_id == tenant_id,
-            User.is_active == True
+            User.is_active == True,
+            User.is_admin == False
         ).scalar() or 0
 
         purchased_licenses = tenant.purchased_user_licenses

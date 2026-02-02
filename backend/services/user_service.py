@@ -103,8 +103,8 @@ class UserService:
                     tenant_id, email, password, first_name, last_name, is_admin, db
                 )
 
-        # Check license availability
-        if not TenantService.check_license_availability(tenant_id, db):
+        # Check license availability only for non-admin users (admins don't consume a license)
+        if not is_admin and not TenantService.check_license_availability(tenant_id, db):
             raise ValueError("No available licenses. Please purchase more licenses.")
 
         # Check if user already exists

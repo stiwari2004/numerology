@@ -12,7 +12,8 @@ import {
   Shield,
   X,
   Check,
-  KeyRound
+  KeyRound,
+  Pencil
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -28,10 +29,18 @@ interface User {
   created_at: string;
 }
 
+interface LicenseUsage {
+  used_licenses: number;
+  available_licenses: number;
+  purchased_licenses: number;
+  usage_percentage?: number;
+}
+
 interface TenantInfo {
   id: string;
   company_name: string;
   purchased_user_licenses: number;
+  license_usage?: LicenseUsage;
 }
 
 export function TenantAdminDashboard() {
@@ -49,6 +58,15 @@ export function TenantAdminDashboard() {
     is_admin: false,
   });
   const [resetPasswordResult, setResetPasswordResult] = useState<{ email: string; message: string; reset_link?: string } | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    email: '',
+    first_name: '',
+    last_name: '',
+    is_active: true,
+    is_admin: false,
+  });
 
   useEffect(() => {
     const token = AuthApiService.getAuthToken();
@@ -85,6 +103,7 @@ export function TenantAdminDashboard() {
         id: tenantRes.data.id,
         company_name: tenantRes.data.company_name,
         purchased_user_licenses: tenantRes.data.purchased_user_licenses,
+        license_usage: tenantRes.data.license_usage,
       });
 
       // Load users
@@ -169,6 +188,38 @@ export function TenantAdminDashboard() {
     }
   };
 
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      email: user.email,
+      first_name: user.first_name ?? '',
+      last_name: user.last_name ?? '',
+      is_active: user.is_active,
+      is_admin: user.is_admin,
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setError(null);
+    try {
+      const token = AuthApiService.getAuthToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(
+        `${API_BASE_URL}/api/v1/users/${editingUser.id}`,
+        editForm,
+        { headers }
+      );
+      setShowEditModal(false);
+      setEditingUser(null);
+      loadDashboardData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update user');
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) {
       return;
@@ -196,10 +247,10 @@ export function TenantAdminDashboard() {
     navigate('/tenant-admin/login');
   };
 
-  const activeUsers = users.filter(u => u.is_active).length;
-  const availableLicenses = tenantInfo 
-    ? Math.max(0, tenantInfo.purchased_user_licenses - activeUsers)
-    : 0;
+  // License stats: only non-admin users consume licenses (from backend license_usage)
+  const usedLicenses = tenantInfo?.license_usage?.used_licenses ?? 0;
+  const availableLicenses = tenantInfo?.license_usage?.available_licenses ?? 0;
+  const adminCount = users.filter(u => u.is_admin).length;
 
   if (loading) {
     return (
@@ -263,16 +314,18 @@ export function TenantAdminDashboard() {
           </div>
         )}
 
-        {/* Statistics */}
+        {/* Statistics - licenses exclude tenant admin(s) */}
         {tenantInfo && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-slate-600">Total Users</h3>
+                <h3 className="text-sm font-medium text-slate-600">User Licenses Used</h3>
                 <Users className="w-5 h-5 text-slate-400" />
               </div>
-              <p className="text-3xl font-semibold text-slate-900">{users.length}</p>
-              <p className="text-xs text-slate-500 mt-1">{activeUsers} active</p>
+              <p className="text-3xl font-semibold text-slate-900">{usedLicenses}</p>
+              <p className="text-xs text-slate-500 mt-1">
+                {adminCount > 0 ? `+ ${adminCount} tenant admin(s) (excluded from license count)` : 'Users consuming licenses'}
+              </p>
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
@@ -281,7 +334,7 @@ export function TenantAdminDashboard() {
                 <Shield className="w-5 h-5 text-slate-400" />
               </div>
               <p className="text-3xl font-semibold text-slate-900">
-                {tenantInfo.purchased_user_licenses}
+                {tenantInfo.license_usage?.purchased_licenses ?? tenantInfo.purchased_user_licenses}
               </p>
             </div>
 
@@ -347,10 +400,12 @@ export function TenantAdminDashboard() {
                       {user.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {user.is_admin && (
+                      {user.is_admin ? (
                         <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                          Admin
+                          Tenant Admin
                         </span>
+                      ) : (
+                        <span className="text-slate-500 text-sm">User</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -369,6 +424,13 @@ export function TenantAdminDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openEditModal(user)}
+                          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                          title="Edit user"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleSendPasswordReset(user)}
                           className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
@@ -403,6 +465,93 @@ export function TenantAdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Edit User Modal */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Edit User</h3>
+              <button
+                onClick={() => { setShowEditModal(false); setEditingUser(null); }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleEditUser} className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={editForm.first_name}
+                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={editForm.last_name}
+                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_active"
+                  checked={editForm.is_active}
+                  onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                  className="w-4 h-4 text-slate-600 border-slate-300 rounded focus:ring-slate-500"
+                />
+                <label htmlFor="edit_is_active" className="text-sm text-slate-700">Active</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="edit_is_admin"
+                  checked={editForm.is_admin}
+                  onChange={(e) => setEditForm({ ...editForm, is_admin: e.target.checked })}
+                  disabled={AuthApiService.getCurrentUser()?.id === editingUser.id}
+                  className="w-4 h-4 text-slate-600 border-slate-300 rounded focus:ring-slate-500 disabled:opacity-50"
+                />
+                <label htmlFor="edit_is_admin" className="text-sm text-slate-700">
+                  Tenant Admin {AuthApiService.getCurrentUser()?.id === editingUser.id && '(you cannot remove your own admin role)'}
+                </label>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowEditModal(false); setEditingUser(null); }}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create User Modal */}
       {showCreateModal && (
