@@ -68,10 +68,11 @@ CREATE USER numerology_app WITH PASSWORD 'CHOOSE_A_STRONG_PASSWORD';
 CREATE DATABASE numerology_msp OWNER numerology_app;
 \c numerology_msp
 \i /path/to/OPT/numerology/backend/database/schema.sql
+\i /path/to/OPT/numerology/backend/database/grants.sql
 \q
 ```
 
-Replace `/path/to/OPT` with your actual OPT folder path (e.g. `/home/deploy/OPT`). If the path differs, run the SQL file from the correct path, or paste the contents of `backend/database/schema.sql` into `psql` after `\c numerology_msp`.
+Replace `/path/to/OPT` with your actual OPT folder path (e.g. `/home/deploy/OPT`). If the path differs, run the SQL files from the correct path. **Important:** If you ran `schema.sql` as user `postgres`, the tables are owned by postgres and the app user has no access. You must run `grants.sql` as postgres (as above) so `numerology_app` can read/write tables. If your app user has a different name, edit `grants.sql` and replace `numerology_app` with that name.
 
 Note the password; you’ll use it in the backend `.env`.
 
@@ -108,7 +109,9 @@ source venv/bin/activate
 uvicorn main:app --host 127.0.0.1 --port 8003
 ```
 
-From another terminal: `curl http://127.0.0.1:8003/health` → `{"status":"healthy"}`. Then stop with Ctrl+C.
+From another terminal run: `curl http://127.0.0.1:8003/health` (you should see `{"status":"healthy"}`). Then stop the server with Ctrl+C.
+
+**Run the backend continuously (survives SSH disconnect):** Do not rely on a manual uvicorn in a terminal—closing SSH or PowerShell will stop it. Use the systemd service in section 7 so the backend runs in the background, restarts on failure, and starts on boot. For a quick test without systemd you can run: `nohup uvicorn main:app --host 127.0.0.1 --port 8003 &` (then `disown` or leave the session open).
 
 ---
 
@@ -130,9 +133,9 @@ Start the backend (systemd or manually), then open **https://admin.mysticnumerol
 
 ---
 
-## 7. Backend systemd service
+## 7. Backend systemd service (run continuously)
 
-So the backend runs on boot and restarts on failure:
+Use this so the backend keeps running after you close SSH, survives reboots, and restarts on failure:
 
 ```bash
 sudo nano /etc/systemd/system/numerology-backend.service
@@ -312,7 +315,7 @@ sudo systemctl restart numerology-backend
 | 1 | Install Python 3, Node, PostgreSQL, Nginx, Certbot |
 | 2 | Ensure OPT folder exists; create `OPT/numerology` |
 | 3 | Clone repo into `OPT/numerology` |
-| 4 | Create DB `numerology_msp`, user, run `schema.sql` |
+| 4 | Create DB `numerology_msp`, user, run `schema.sql` and `grants.sql` |
 | 5 | Backend: venv, `pip install`, `.env` (DB, SECRET_KEY, SUBDOMAIN_BASE_DOMAIN, ADMIN_SUBDOMAIN) |
 | 6 | Run `create_super_admin.py`; create tenant **sneha** via Super Admin UI |
 | 7 | Systemd service for uvicorn on 127.0.0.1:8003 |

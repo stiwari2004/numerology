@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """
 Create the first Super Admin.
-Run from backend directory: python scripts/create_super_admin.py <email> <password>
+Run from backend directory:
+  python scripts/create_super_admin.py --email YOUR_EMAIL --password YOUR_PASSWORD
+  or: python scripts/create_super_admin.py <email> <password>
 """
+import argparse
 import os
 import sys
 
@@ -15,11 +18,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python scripts/create_super_admin.py <email> <password>")
+    parser = argparse.ArgumentParser(description="Create the first Super Admin user.")
+    parser.add_argument("--email", "-e", help="Super Admin email")
+    parser.add_argument("--password", "-p", help="Super Admin password")
+    parser.add_argument("email_pos", nargs="?", help="Email (positional)")
+    parser.add_argument("password_pos", nargs="?", help="Password (positional)")
+    args = parser.parse_args()
+    email = (args.email or args.email_pos or "").strip()
+    password = args.password or args.password_pos
+    if not email or not password:
+        print("Usage: python scripts/create_super_admin.py --email YOUR_EMAIL --password YOUR_PASSWORD")
+        print("   or: python scripts/create_super_admin.py <email> <password>")
         sys.exit(1)
-    email = sys.argv[1].strip()
-    password = sys.argv[2]
 
     from database.connection import get_db_context
     from services.super_admin_service import SuperAdminService
@@ -50,10 +60,16 @@ def main():
         if "not permitted to log in" in err:
             print("")
             print("The PostgreSQL role in your .env exists but is not allowed to log in.")
-            print("In pgAdmin 4: open Query Tool and run (replace snehanumerology if different):")
-            print("  ALTER ROLE snehanumerology LOGIN;")
+            print("In psql as postgres, run (replace numerology_app if different):")
+            print("  ALTER ROLE numerology_app LOGIN;")
             print("Then set a password if needed:")
-            print("  ALTER ROLE snehanumerology WITH PASSWORD 'YourPassword';")
+            print("  ALTER ROLE numerology_app WITH PASSWORD 'YourPassword';")
+            sys.exit(1)
+        if "permission denied" in err or "insufficient_privilege" in err:
+            print("")
+            print("The app user does not have permission on the database tables.")
+            print("Run grants as postgres: psql -U postgres -d numerology_msp -f backend/database/grants.sql")
+            print("(Replace numerology_app in grants.sql with your DATABASE_URL username if different.)")
             sys.exit(1)
         raise
     except ValueError as e:
