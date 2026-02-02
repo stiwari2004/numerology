@@ -345,6 +345,15 @@ server {
         try_files $uri $uri/ /index.html;
     }
     location /api {
+        client_max_body_size 2M;
+        proxy_pass http://127.0.0.1:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /static {
         proxy_pass http://127.0.0.1:8003;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -572,6 +581,48 @@ Then restart the backend:
 ```bash
 sudo systemctl restart numerology-backend
 ```
+
+---
+
+## 12a. Logo upload: 404 or upload fails
+
+If tenant admin logo upload returns **404** or fails:
+
+**1. Ensure backend has the logo endpoint (latest code):**
+
+```bash
+cd /opt/numerology
+git pull
+# or sync your latest code
+```
+
+**2. Restart the backend service:**
+
+```bash
+sudo systemctl restart numerology-backend
+```
+
+**3. Nginx frontend config must include `/api` and `/static` with `client_max_body_size 2M`:**
+
+Copy the updated frontend config from the repo:
+
+```bash
+sudo cp /opt/numerology/docs/nginx/numerology-frontend.conf /etc/nginx/sites-available/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+The frontend Nginx block must have:
+- `location /api` with `client_max_body_size 2M;` (for file uploads up to 2MB)
+- `location /static` with `proxy_pass http://127.0.0.1:8003;` (to serve uploaded logos)
+
+**4. Verify the endpoint works:**
+
+```bash
+curl -I http://127.0.0.1:8003/api/v1/tenant/logo
+# Should return 401 or 405, not 404
+```
+
+If you see 404, the backend is running old code—repeat steps 1–2.
 
 ---
 
