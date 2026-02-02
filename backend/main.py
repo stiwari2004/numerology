@@ -5,8 +5,10 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from api.endpoints import numerology, auth, users, tenant, super_admin
 from middleware.tenant_middleware import TenantMiddleware
 from database.connection import init_db
@@ -44,6 +46,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static files for uploaded logos
+UPLOADS_DIR = Path(__file__).resolve().parent / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
+(UPLOADS_DIR / "logos").mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(UPLOADS_DIR)), name="static")
 
 # Include routers
 app.include_router(numerology.router, prefix="/api/v1/numerology", tags=["numerology"])

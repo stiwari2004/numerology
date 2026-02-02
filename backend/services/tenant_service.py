@@ -135,20 +135,23 @@ class TenantService:
         primary_color: Optional[str] = None,
         secondary_color: Optional[str] = None,
         company_name: Optional[str] = None,
+        clear_logo: bool = False,
         db: Session = None
     ) -> Tenant:
-        """Update tenant branding"""
+        """Update tenant branding. Set clear_logo=True to remove logo."""
         if db is None:
             with get_db_context() as db:
                 return TenantService.update_tenant_branding(
-                    tenant_id, logo_url, primary_color, secondary_color, company_name, db
+                    tenant_id, logo_url, primary_color, secondary_color, company_name, clear_logo, db
                 )
 
         tenant = TenantService.get_tenant_by_id(tenant_id, db)
         if not tenant:
             raise ValueError(f"Tenant {tenant_id} not found")
 
-        if logo_url is not None:
+        if clear_logo:
+            tenant.logo_url = None
+        elif logo_url is not None:
             tenant.logo_url = logo_url
         if primary_color is not None:
             tenant.primary_color = primary_color

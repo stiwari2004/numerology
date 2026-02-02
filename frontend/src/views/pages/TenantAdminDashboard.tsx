@@ -71,7 +71,8 @@ export function TenantAdminDashboard() {
     is_admin: false,
   });
   const [showLogoModal, setShowLogoModal] = useState(false);
-  const [logoUrl, setLogoUrl] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [savingLogo, setSavingLogo] = useState(false);
 
   useEffect(() => {
@@ -254,27 +255,66 @@ export function TenantAdminDashboard() {
     navigate('/tenant-admin/login');
   };
 
+  // Resolve logo URL - prepend API base when path is relative
+  const resolveLogoUrl = (url: string | null | undefined): string => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${API_BASE_URL.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const openLogoModal = () => {
-    setLogoUrl(tenantInfo?.logo_url || '');
+    setLogoFile(null);
+    setLogoPreview(null);
     setShowLogoModal(true);
+  };
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Invalid file type. Use PNG, JPG, GIF or WebP.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError('File too large. Max 2MB.');
+      return;
+    }
+    setError(null);
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleSaveLogo = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!logoFile) {
+      setError('Please select an image file to upload.');
+      return;
+    }
     setSavingLogo(true);
     setError(null);
     try {
       const token = AuthApiService.getAuthToken();
-      const headers = { Authorization: `Bearer ${token}` };
-      await axios.put(
-        `${API_BASE_URL}/api/v1/tenant/config`,
-        { logo_url: logoUrl || null },
-        { headers }
+      const formData = new FormData();
+      formData.append('file', logoFile);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/v1/tenant/logo`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
       );
       setShowLogoModal(false);
+      setLogoFile(null);
+      setLogoPreview(null);
       loadDashboardData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update logo');
+      setError(err instanceof Error ? err.message : 'Failed to upload logo');
     } finally {
       setSavingLogo(false);
     }
@@ -394,10 +434,10 @@ export function TenantAdminDashboard() {
             </button>
           </div>
           <div className="flex items-center gap-4">
-            <div className="w-24 h-24 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden">
+            <div className="w-[120px] h-[120px] bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden">
               {tenantInfo?.logo_url ? (
                 <img 
-                  src={tenantInfo.logo_url} 
+                  src={resolveLogoUrl(tenantInfo.logo_url)} 
                   alt="Company Logo" 
                   className="w-full h-full object-contain"
                   onError={(e) => {
@@ -630,7 +670,7 @@ export function TenantAdminDashboard() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-900">Update Company Logo</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Upload Company Logo</h3>
               <button
                 onClick={() => setShowLogoModal(false)}
                 className="text-slate-400 hover:text-slate-600"
@@ -641,33 +681,28 @@ export function TenantAdminDashboard() {
             <form onSubmit={handleSaveLogo} className="px-6 py-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Logo URL
+                  Choose image from your computer
                 </label>
                 <input
-                  type="url"
-                  placeholder="https://example.com/logo.png"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={handleLogoFileChange}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-slate-100 file:text-slate-700 file:text-sm"
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  Enter the URL of your logo image. Recommended: PNG or JPG, square format.
+                  PNG, JPG, GIF or WebP. Max 2MB. Will display at 120×120px on login page.
                 </p>
               </div>
               
               {/* Preview */}
-              {logoUrl && (
+              {logoPreview && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Preview</label>
                   <div className="w-[120px] h-[120px] bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden mx-auto">
                     <img 
-                      src={logoUrl} 
+                      src={logoPreview} 
                       alt="Logo Preview" 
                       className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '';
-                        (e.target as HTMLImageElement).alt = 'Invalid URL';
-                      }}
                     />
                   </div>
                   <p className="text-center text-xs text-slate-500 mt-1">120px × 120px (fixed size)</p>
@@ -684,10 +719,10 @@ export function TenantAdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={savingLogo}
+                  disabled={savingLogo || !logoFile}
                   className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 disabled:opacity-50"
                 >
-                  {savingLogo ? 'Saving...' : 'Save Logo'}
+                  {savingLogo ? 'Uploading...' : 'Upload Logo'}
                 </button>
               </div>
             </form>

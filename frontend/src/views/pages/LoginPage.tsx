@@ -23,6 +23,13 @@ export function LoginPage() {
   const [branding, setBranding] = useState<TenantBranding | null>(null);
   const navigate = useNavigate();
 
+  // Resolve logo URL - prepend API base when path is relative
+  const resolveLogoUrl = (url: string | null | undefined): string => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return `${API_BASE_URL.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   // Fetch tenant branding (logo) on mount
   useEffect(() => {
     const fetchBranding = async () => {
@@ -63,7 +70,7 @@ export function LoginPage() {
             <div className="mb-4 flex justify-center">
               <div className="w-[120px] h-[120px] flex items-center justify-center">
                 <img 
-                  src={branding.logo_url} 
+                  src={resolveLogoUrl(branding.logo_url)} 
                   alt={branding.company_name || 'Logo'} 
                   className="max-w-full max-h-full object-contain"
                 />

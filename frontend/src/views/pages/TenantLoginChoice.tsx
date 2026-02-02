@@ -42,7 +42,7 @@ export function TenantLoginChoice() {
             <div className="mb-4 flex justify-center">
               <div className="w-[120px] h-[120px] flex items-center justify-center">
                 <img 
-                  src={branding.logo_url} 
+                  src={resolveLogoUrl(branding.logo_url)} 
                   alt={branding.company_name || 'Logo'} 
                   className="max-w-full max-h-full object-contain"
                 />
