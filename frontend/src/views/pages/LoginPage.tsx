@@ -39,6 +39,9 @@ export function LoginPage() {
           <p className="text-slate-600 text-sm">
             Sign in to access your numerology dashboard
           </p>
+          <Link to="/tenant-admin/login" className="inline-block mt-2 text-sm text-slate-600 hover:text-slate-900">
+            Tenant admin? Sign in here
+          </Link>
         </div>
 
         {error && (

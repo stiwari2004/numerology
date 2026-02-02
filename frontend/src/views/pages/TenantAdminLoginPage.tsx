@@ -48,6 +48,9 @@ export function TenantAdminLoginPage() {
           <p className="text-slate-600 text-sm">
             Sign in to manage your tenant
           </p>
+          <Link to="/login" className="inline-block mt-2 text-sm text-slate-600 hover:text-slate-900">
+            User login? Sign in here
+          </Link>
         </div>
 
         {error && (

@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '@/views/pages/LoginPage';
 import { TenantAdminLoginPage } from '@/views/pages/TenantAdminLoginPage';
 import { SuperAdminLoginPage } from '@/views/pages/SuperAdminLoginPage';
+import { TenantLoginChoice } from '@/views/pages/TenantLoginChoice';
 import { ForgotPasswordPage } from '@/views/pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/views/pages/ResetPasswordPage';
 import { UserDashboard } from '@/views/pages/UserDashboard';
@@ -25,7 +26,7 @@ function LoginRoute() {
 function DefaultRedirect() {
   const isAdminDomain = typeof window !== 'undefined' && window.location.hostname === ADMIN_HOST;
   if (isAdminDomain) return <Navigate to="/super-admin/login" replace />;
-  return <Navigate to="/login" replace />;
+  return <TenantLoginChoice />;
 }
 
 function App() {
@@ -66,7 +67,7 @@ function App() {
           }
         />
 
-        {/* Default redirect: admin domain -> super-admin login, else -> user login */}
+        {/* Default: admin domain -> super-admin login; tenant domain -> choice (user vs tenant admin) */}
         <Route path="/" element={<DefaultRedirect />} />
       </Routes>
     </BrowserRouter>
