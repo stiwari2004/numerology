@@ -299,7 +299,7 @@ export function TenantAdminDashboard() {
       const token = AuthApiService.getAuthToken();
       const formData = new FormData();
       formData.append('file', logoFile);
-      const res = await axios.post(
+      await axios.post(
         `${API_BASE_URL}/api/v1/tenant/logo`,
         formData,
         {
