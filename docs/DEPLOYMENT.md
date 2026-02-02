@@ -7,11 +7,14 @@ This guide gets the app live on your server **without Docker**: backend (FastAPI
 **Folder layout:** All apps live under an **OPT** folder (e.g. `fitglide_nextjs`, `fitglide_strapi`). Numerology will sit in **OPT/numerology**—either clone the repo there or create `OPT/numerology` and sync/copy the project into it. In this doc, **OPT** is the full path to that folder (e.g. `/home/deploy/OPT` or `/opt/OPT`). The app root is `$OPT/numerology`.
 
 **Your setup:**
-- **admin.mysticnumerology.com** → Super Admin (you manage tenants)
-- **sneha.mysticnumerology.com** → Tenant “Sneha” (tenant admin + users)
-- **backend.mysticnumerology.com** → API only
+- **backend.mysticnumerology.com** → API only (FastAPI on port 8003)
+- **admin.mysticnumerology.com** → Super Admin (you manage tenants); log in at `/super-admin/login`
+- **sneha.mysticnumerology.com** → Tenant “Sneha” (tenant admin at `/tenant-admin/login`, end users at `/login`)
+- **mysticnumerology.com** → Main numerology app for users (user login at `/login`); needs a tenant with **custom_domain** = mysticnumerology.com
 
-DNS is already set: A/CNAME records for `admin`, `sneha`, and `backend` (and optionally `*.mysticnumerology.com`) pointing to your server IP.
+All three frontend hostnames serve the **same React app** (one build). The backend decides tenant from the **Host** header: admin = no tenant (Super Admin), sneha = subdomain “sneha”, mysticnumerology.com = tenant with custom_domain mysticnumerology.com.
+
+DNS is already set: A/CNAME for `admin`, `sneha`, `backend`, and apex `mysticnumerology.com` pointing to your server IP.
 
 ---
 
@@ -465,14 +468,70 @@ Check Nginx error log: `sudo tail -30 /var/log/nginx/error.log`. If you never bu
 
 **5. Separation checklist**
 
-| Hostname | Nginx config | Backend / root |
-|----------|--------------|----------------|
-| backend.mysticnumerology.com | numerology-backend | proxy_pass http://127.0.0.1:8003 |
-| admin.mysticnumerology.com | numerology-frontend | root /opt/numerology/frontend/dist |
-| sneha.mysticnumerology.com | numerology-frontend | same root + /api to 127.0.0.1:8003 |
-| fitglide.in / Strapi | other configs only | Strapi port; no mysticnumerology.com |
+| Hostname | Nginx config | Purpose / backend |
+|----------|--------------|-------------------|
+| backend.mysticnumerology.com | numerology-backend | API only; proxy_pass http://127.0.0.1:8003 |
+| admin.mysticnumerology.com | numerology-frontend | Super Admin; root /opt/numerology/frontend/dist |
+| sneha.mysticnumerology.com | numerology-frontend | Tenant Sneha (admin + users); same root + /api → 8003 |
+| mysticnumerology.com | numerology-frontend | Main site users; same root + /api → 8003; tenant with custom_domain |
+
+**Do not touch Fitglide/Strapi or any other site.** Their Nginx configs stay as they are. Only numerology-backend and numerology-frontend handle mysticnumerology.com hostnames.
 
 Do not put backend.mysticnumerology.com or admin.mysticnumerology.com in any Fitglide/Strapi server block.
+
+**6. Fix the three frontend sites (admin, sneha, mysticnumerology.com)**
+
+All three hostnames serve the **same React app** from one Nginx server block (`numerology-frontend`). Ensure:
+
+**6a. Build the frontend on the server**
+
+```bash
+cd /opt/numerology/frontend
+npm ci
+npm run build
+```
+
+You should see `frontend/dist/` with `index.html` and assets. If you use relative `/api` (Nginx proxies to 8003), build without `VITE_API_BASE_URL`. If you want the app to call the backend by hostname, use: `VITE_API_BASE_URL=https://backend.mysticnumerology.com npm run build`.
+
+**6b. Nginx numerology-frontend must list all three hostnames and point to dist**
+
+```bash
+grep -E "server_name|root" /etc/nginx/sites-enabled/numerology-frontend
+```
+
+You should see: `server_name admin.mysticnumerology.com sneha.mysticnumerology.com mysticnumerology.com;` and `root /opt/numerology/frontend/dist;` (or your actual path). If `root` is wrong or `mysticnumerology.com` is missing, edit the **source** file then reload:
+
+```bash
+sudo nano /etc/nginx/sites-available/numerology-frontend
+```
+
+Set `server_name admin.mysticnumerology.com sneha.mysticnumerology.com mysticnumerology.com;` and `root /opt/numerology/frontend/dist;`, then:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**6c. Let Nginx read the frontend files**
+
+```bash
+sudo chmod -R o+x /opt
+sudo chmod -R o+r /opt/numerology/frontend/dist
+```
+
+**6d. Create a tenant for mysticnumerology.com (main site for users)**
+
+The apex domain **mysticnumerology.com** is for end users (user login). The backend resolves tenant by **custom_domain** when the Host is mysticnumerology.com. Create that tenant in Super Admin:
+
+1. Log in at https://admin.mysticnumerology.com/super-admin/login  
+2. Create a new tenant with:
+   - **Subdomain:** leave empty (or N/A)
+   - **Custom domain:** `mysticnumerology.com`
+   - **Company name:** e.g. Mystic Numerology
+   - **Contact email:** your contact
+   - **Admin email** and **Admin password:** optional (if you want a tenant admin for the main site)
+3. Save. After that, users can go to https://mysticnumerology.com/login and log in as users of that tenant.
+
+**Summary:** admin = Super Admin only (no tenant). sneha = tenant with subdomain “sneha”. mysticnumerology.com = tenant with custom_domain mysticnumerology.com. Same SPA, same Nginx block; backend picks tenant from Host.
 
 ---
 
@@ -516,9 +575,12 @@ sudo systemctl restart numerology-backend
 
 ## 14. URLs for the client
 
-- **Super Admin:** https://admin.mysticnumerology.com/super-admin/login  
-- **Tenant “Sneha” (tenant admin):** https://sneha.mysticnumerology.com/tenant-admin/login  
-- **Tenant “Sneha” (end users):** https://sneha.mysticnumerology.com/login  
-- **API docs:** https://backend.mysticnumerology.com/docs  
+| Who | URL |
+|-----|-----|
+| **Super Admin** (you) | https://admin.mysticnumerology.com/super-admin/login |
+| **Tenant “Sneha” – tenant admin** | https://sneha.mysticnumerology.com/tenant-admin/login |
+| **Tenant “Sneha” – end users** | https://sneha.mysticnumerology.com/login |
+| **Main site – users** (mysticnumerology.com tenant) | https://mysticnumerology.com/login |
+| **API docs** | https://backend.mysticnumerology.com/docs |
 
 No Docker is required; everything runs with system services and Nginx.

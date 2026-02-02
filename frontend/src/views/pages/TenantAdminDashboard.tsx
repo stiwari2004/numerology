@@ -10,8 +10,6 @@ import {
   UserPlus, 
   LogOut, 
   Shield,
-  Mail,
-  Calendar,
   X,
   Check,
   KeyRound

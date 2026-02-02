@@ -50,7 +50,7 @@ const colorConfigs = {
   },
 };
 
-export function NumberCard({ label, value, color = 'blue', labelLetter }: NumberCardProps) {
+export function NumberCard({ label, value, color = 'blue' }: NumberCardProps) {
   const config = colorConfigs[color];
   
   return (

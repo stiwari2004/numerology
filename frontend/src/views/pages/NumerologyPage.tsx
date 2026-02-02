@@ -220,7 +220,7 @@ export function NumerologyPage() {
                   </p>
                 </div>
                 <div className="space-y-4">
-                  {result.year_grids.map((yearGrid, index) => {
+                  {result.year_grids.map((yearGrid) => {
                     const isExpanded = expandedYear === yearGrid.year;
                     const isLoading = loadingMonthlyGrids === yearGrid.year;
                     const months = monthlyGrids[yearGrid.year] || [];

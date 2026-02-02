@@ -3,7 +3,7 @@
  */
 
 import { useState, useMemo } from 'react';
-import type { NumerologyResult } from '@/models/types';
+import type { NumerologyResult, YearGrid } from '@/models/types';
 
 interface UseYearSelectorReturn {
   selectedYear: number | null;
@@ -21,7 +21,7 @@ export function useYearSelector(result: NumerologyResult | null): UseYearSelecto
   const selectedYearInfo = useMemo(() => {
     if (!result || !selectedYear) return null;
 
-    const yearEntry = result.year_table.find(entry => entry.year === selectedYear);
+    const yearEntry = result.year_grids.find((entry: YearGrid) => entry.year === selectedYear);
     if (!yearEntry) return null;
 
     return {

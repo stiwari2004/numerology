@@ -46,7 +46,7 @@ export function NatalGrid({
   // Helper function to render cell content with highlighted digits
   // Order of addition: Natal (Root/Destiny) -> Mahadasha -> Antardasha/Pratyantar
   // So: earlier digits = Natal, last digit = Antardasha/PD (if matches), second-to-last = Mahadasha (if matches)
-  const renderCellContent = (cell: string | null, rowIdx: number, colIdx: number): JSX.Element => {
+  const renderCellContent = (cell: string | null, rowIdx: number, colIdx: number): React.ReactElement => {
     if (!cell) {
       return <span className="text-slate-400">-</span>;
     }
@@ -74,7 +74,7 @@ export function NatalGrid({
     // - Second-to-last digit = Mahadasha (if matches)
     // - Earlier digits = Natal (Root/Destiny, prefer Destiny over Root)
     
-    const coloredDigits: JSX.Element[] = [];
+    const coloredDigits: React.ReactElement[] = [];
     const showLabels = isPeriodGrid; // Only show R/D labels in period grids
     
     // Determine if we should show R or D label for this cell (only in period grids)
