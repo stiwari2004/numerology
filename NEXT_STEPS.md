@@ -25,7 +25,7 @@ cd C:\Users\Admin\Documents\Numerology
 ```powershell
 cd C:\Users\Admin\Documents\Numerology\backend
 .\venv\Scripts\Activate.ps1
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8003
 ```
 
 **Terminal 2 – Frontend**
@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-- **Backend**: http://localhost:8000 (API docs: http://localhost:8000/docs)  
+- **Backend**: http://localhost:8003 (API docs: http://localhost:8003/docs)  
 - **Frontend**: http://localhost:3006  
 
 ---
@@ -92,8 +92,8 @@ Then:
 | Super Admin | http://localhost:3006/super-admin/login | Your super admin email / password |
 | Tenant Admin | http://localhost:3006/tenant-admin/login | tenantadmin@localhost.dev / Admin123! |
 | User (calculator) | http://localhost:3006/login | user@localhost.dev / User123! |
-| API docs | http://localhost:8000/docs | — |
-| Health | http://localhost:8000/health | — |
+| API docs | http://localhost:8003/docs | — |
+| Health | http://localhost:8003/health | — |
 
 ---
 

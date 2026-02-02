@@ -44,7 +44,7 @@ cd backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8003
 ```
 
 **Frontend:**
@@ -57,8 +57,8 @@ npm run dev
 ## URLs
 
 - **Frontend**: http://localhost:3006
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+- **Backend API**: http://localhost:8003
+- **API Documentation**: http://localhost:8003/docs
 
 ## Tech Stack
 

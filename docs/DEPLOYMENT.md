@@ -203,9 +203,14 @@ Built files will be in `frontend/dist/`. Serve this directory with Nginx (next s
 
 ## 9. Nginx: reverse proxy and static frontend
 
-Create two config snippets (or one file per server block). Replace `YOUR_SERVER_IP` if you use a single IP for everything.
+**You need this step for the backend and frontend URLs to work.** The systemd service (section 7) only runs the FastAPI app on port 8003 on the server; it does not route a domain to it. Until you add Nginx config for `backend.mysticnumerology.com`, that hostname may still point at another app (e.g. Strapi) or a default site. Add the config below so that:
 
-**Backend** – `backend.mysticnumerology.com`:
+- **backend.mysticnumerology.com** → Numerology FastAPI (port 8003), not Strapi or anything else  
+- **admin.mysticnumerology.com** and **sneha.mysticnumerology.com** → Numerology frontend (and `/api` to port 8003)
+
+Create two separate Nginx config files (one for the backend, one for the frontend). These are for **Numerology only**; leave your existing Strapi/other configs as they are (different `server_name` values).
+
+**Backend** – `backend.mysticnumerology.com` (Numerology API on port 8003):
 
 ```bash
 sudo nano /etc/nginx/sites-available/numerology-backend
@@ -216,7 +221,7 @@ server {
     listen 80;
     server_name backend.mysticnumerology.com;
     location / {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8003;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -242,7 +247,7 @@ server {
         try_files $uri $uri/ /index.html;
     }
     location /api {
-        proxy_pass http://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8003;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -254,7 +259,21 @@ server {
 
 If you use a single domain and want to proxy API from the frontend host, you can keep `location /api` as above; then the frontend can use relative `/api` and you don’t need `VITE_API_BASE_URL`. If you prefer the frontend to call `https://backend.mysticnumerology.com` directly, use `VITE_API_BASE_URL=https://backend.mysticnumerology.com` when building and you can remove `location /api` from the frontend server block.
 
-Enable sites and test:
+**Quick setup (if you have the repo on the server):** Copy the Nginx configs from the repo, enable them, then test and reload:
+
+```bash
+# From repo root (e.g. /opt/numerology)
+sudo cp docs/nginx/numerology-backend.conf /etc/nginx/sites-available/
+sudo cp docs/nginx/numerology-frontend.conf /etc/nginx/sites-available/
+sudo ln -sf /etc/nginx/sites-available/numerology-backend.conf /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/numerology-frontend.conf /etc/nginx/sites-enabled/
+# If frontend root path differs (e.g. /home/opsadmin/OPT/numerology), edit the frontend config first:
+# sudo nano /etc/nginx/sites-available/numerology-frontend.conf  → change root /opt/numerology/... to your path
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Or create the files by hand (section above). Then enable and reload:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/numerology-backend /etc/nginx/sites-enabled/

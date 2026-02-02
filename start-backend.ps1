@@ -26,6 +26,6 @@ if (-not (Test-Path "venv\Lib\site-packages\uvicorn")) {
 }
 
 # Start server
-Write-Host "Starting FastAPI server on http://localhost:8000" -ForegroundColor Green
-Write-Host "API docs available at http://localhost:8000/docs" -ForegroundColor Cyan
-uvicorn main:app --reload --port 8000
+Write-Host "Starting FastAPI server on http://localhost:8003" -ForegroundColor Green
+Write-Host "API docs available at http://localhost:8003/docs" -ForegroundColor Cyan
+uvicorn main:app --reload --port 8003

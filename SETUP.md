@@ -26,7 +26,7 @@
 
 5. **Start backend:**
    ```powershell
-   uvicorn main:app --reload --port 8000
+   uvicorn main:app --reload --port 8003
    ```
 
    Or use the script:
@@ -70,7 +70,7 @@ This opens two PowerShell windows - one for backend, one for frontend.
 
 ## Verify It's Working
 
-1. **Backend**: Open http://localhost:8000/docs - You should see Swagger UI
+1. **Backend**: Open http://localhost:8003/docs - You should see Swagger UI
 2. **Frontend**: Open http://localhost:3006 - You should see the Numerology Calculator
 3. **Test**: Enter a birthdate like `30/06/1986` and click Calculate
 
@@ -80,7 +80,7 @@ This opens two PowerShell windows - one for backend, one for frontend.
 
 - **"uvicorn not found"**: Make sure virtual environment is activated
 - **"Module not found"**: Make sure you're running from the backend directory
-- **Port 8000 in use**: Change port in `main.py` or kill the process using port 8000
+- **Port 8003 in use**: Change port in `main.py` or kill the process using port 8003
 
 ### Frontend Issues
 

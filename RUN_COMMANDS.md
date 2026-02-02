@@ -51,10 +51,10 @@ python -m pip install -r requirements.txt
 ```powershell
 cd C:\Users\Admin\Documents\Numerology\backend
 .\venv\Scripts\Activate.ps1
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload --port 8003
 ```
 
-Keep this terminal open. Backend runs at **http://localhost:8000** (API docs at **http://localhost:8000/docs**).
+Keep this terminal open. Backend runs at **http://localhost:8003** (API docs at **http://localhost:8003/docs**).
 
 ---
 
@@ -97,7 +97,7 @@ This starts backend and frontend in new PowerShell windows. Ensure backend and f
 |------|---------|
 | DB init | `cd backend` → activate venv → `python -c "from dotenv import load_dotenv; load_dotenv(); from database.connection import init_db; init_db()"` |
 | Create super admin | `cd backend` → activate venv → `python scripts/create_super_admin.py "email" "password"` |
-| Backend | `cd backend` → activate venv → `uvicorn main:app --reload --port 8000` |
+| Backend | `cd backend` → activate venv → `uvicorn main:app --reload --port 8003` |
 | Frontend | `cd frontend` → `npm run dev` |
 | Both | `.\start-all.ps1` from repo root |
 
@@ -105,6 +105,6 @@ This starts backend and frontend in new PowerShell windows. Ensure backend and f
 
 ## Verify
 
-1. **Backend:** open **http://localhost:8000/docs** and try `GET /health`.
+1. **Backend:** open **http://localhost:8003/docs** and try `GET /health`.
 2. **Super admin login:** open **http://localhost:3006/super-admin/login** and sign in with the super admin email/password from step 2.
 3. **Tenant / user login:** requires a tenant and user. Use the API (e.g. create tenant and user) or any tenant onboarding flow you’ve built.
