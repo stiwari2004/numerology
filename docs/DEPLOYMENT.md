@@ -2,6 +2,8 @@
 
 This guide gets the app live on your server **without Docker**: backend (FastAPI), frontend (React), PostgreSQL, and Nginx with HTTPS.
 
+**All commands in this doc are for a Linux server (bash).** Run them in SSH or a terminal on the server—**not** in PowerShell or Windows. Every code block is `bash`.
+
 **Folder layout:** All apps live under an **OPT** folder (e.g. `fitglide_nextjs`, `fitglide_strapi`). Numerology will sit in **OPT/numerology**—either clone the repo there or create `OPT/numerology` and sync/copy the project into it. In this doc, **OPT** is the full path to that folder (e.g. `/home/deploy/OPT` or `/opt/OPT`). The app root is `$OPT/numerology`.
 
 **Your setup:**
@@ -111,7 +113,7 @@ uvicorn main:app --host 127.0.0.1 --port 8003
 
 From another terminal run: `curl http://127.0.0.1:8003/health` (you should see `{"status":"healthy"}`). Then stop the server with Ctrl+C.
 
-**Run the backend continuously (survives SSH disconnect):** Do not rely on a manual uvicorn in a terminal—closing SSH or PowerShell will stop it. Use the systemd service in section 7 so the backend runs in the background, restarts on failure, and starts on boot. For a quick test without systemd you can run: `nohup uvicorn main:app --host 127.0.0.1 --port 8003 &` (then `disown` or leave the session open).
+**Run the backend continuously (survives SSH disconnect):** Do not rely on a manual uvicorn in a terminal—closing SSH or your terminal will stop it. Use the systemd service in section 7 so the backend runs in the background, restarts on failure, and starts on boot. For a quick test without systemd you can run: `nohup uvicorn main:app --host 127.0.0.1 --port 8003 &` (then `disown` or leave the session open).
 
 ---
 
@@ -273,11 +275,68 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-Or create the files by hand (section above). Then enable and reload:
+Or create the files by hand (see **Exact config content** below). Then enable and reload.
+
+**If `cp` fails** (e.g. `docs/nginx/` not on server) or **Nginx reports "unknown directive"**: fix by pasting the exact content below. Remove any broken symlink first, then overwrite the config file.
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/numerology-backend /etc/nginx/sites-enabled/
-sudo ln -s /etc/nginx/sites-available/numerology-frontend /etc/nginx/sites-enabled/
+# Remove broken symlinks so Nginx doesn't load bad configs
+sudo rm -f /etc/nginx/sites-enabled/numerology-backend /etc/nginx/sites-enabled/numerology-frontend
+
+# Backend: overwrite the file with exact content (paste the server { ... } block only)
+sudo nano /etc/nginx/sites-available/numerology-backend
+```
+
+Paste **only** this (nothing else) into `numerology-backend`:
+
+```nginx
+server {
+    listen 80;
+    server_name backend.mysticnumerology.com;
+    location / {
+        proxy_pass http://127.0.0.1:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Then frontend:
+
+```bash
+sudo nano /etc/nginx/sites-available/numerology-frontend
+```
+
+Paste **only** this (edit `root` if your app is not under `/opt/numerology`):
+
+```nginx
+server {
+    listen 80;
+    server_name admin.mysticnumerology.com sneha.mysticnumerology.com mysticnumerology.com;
+    root /opt/numerology/frontend/dist;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    location /api {
+        proxy_pass http://127.0.0.1:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Re-enable and test:
+
+```bash
+sudo ln -sf /etc/nginx/sites-available/numerology-backend /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/numerology-frontend /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -291,23 +350,133 @@ sudo chmod -R o+r /path/to/OPT/numerology/frontend/dist
 
 ---
 
-## 10. HTTPS with Let’s Encrypt
+## 10. Install HTTPS certificate (Let’s Encrypt)
+
+Get free SSL certificates so the sites are served over **https://**. Certbot will obtain certificates and update your Nginx config.
+
+**1. Install Certbot (if not already installed)**
+
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+**2. Obtain certificates for all three hostnames**
 
 ```bash
 sudo certbot --nginx -d backend.mysticnumerology.com -d admin.mysticnumerology.com -d sneha.mysticnumerology.com
 ```
 
-Follow prompts. Certbot will adjust your Nginx config for HTTPS. Optional: add `mysticnumerology.com` to the same cert if you serve the app on the apex domain.
+- When asked for an **email**, enter one you use (for expiry/security notices).
+- Agree to the **Terms of Service** (Y).
+- Choose whether to **redirect HTTP to HTTPS** (recommended: option 2 – Redirect).
 
-Renewal is automatic if `certbot` is installed from the repo; test with:
+Certbot will request certificates from Let’s Encrypt and modify your Nginx server blocks to use HTTPS and (if you chose redirect) send HTTP traffic to HTTPS.
+
+**3. Check that HTTPS works**
+
+```bash
+curl -I https://backend.mysticnumerology.com/health
+curl -I https://admin.mysticnumerology.com
+```
+
+You should see `HTTP/2 200` (or similar). In a browser, open https://admin.mysticnumerology.com and confirm the padlock.
+
+**4. Optional: add apex domain**
+
+If you also serve the app on `mysticnumerology.com` (no subdomain), add it to the same cert:
+
+```bash
+sudo certbot --nginx -d backend.mysticnumerology.com -d admin.mysticnumerology.com -d sneha.mysticnumerology.com -d mysticnumerology.com
+```
+
+**5. Renewal (automatic)**
+
+Certbot sets up a systemd timer or cron job to renew before expiry. Test renewal with:
 
 ```bash
 sudo certbot renew --dry-run
 ```
 
+If that succeeds, you don’t need to do anything else for HTTPS.
+
 ---
 
-## 11. CORS (if frontend and backend on different origins)
+## 11. Separation from Fitglide/Strapi and fixing 502/500
+
+**Problem:** `backend.mysticnumerology.com` shows Strapi (Fitglide), or you get **502** (backend) / **500** (frontend). That usually means Nginx is routing mysticnumerology.com to the wrong app, or the Numerology backend/frontend is not running or not reachable.
+
+**Rule:** Each hostname must be handled by exactly one server block. **Numerology** = `backend.mysticnumerology.com`, `admin.mysticnumerology.com`, `sneha.mysticnumerology.com`. **Fitglide/Strapi** = your fitglide hostnames only (e.g. fitglide.in, admin.fitglide.in). No overlap.
+
+**1. See which Nginx configs use which hostnames**
+
+```bash
+grep -n server_name /etc/nginx/sites-enabled/*
+```
+
+Only `numerology-backend` should contain `backend.mysticnumerology.com`. Only `numerology-frontend` should contain `admin.mysticnumerology.com` and `sneha.mysticnumerology.com`. If any **other** file (e.g. fitglide, strapi) lists those mysticnumerology.com hostnames, remove them from that file so Fitglide configs only list fitglide hostnames.
+
+**2. Ensure Numerology backend proxies to port 8003**
+
+```bash
+sudo cat /etc/nginx/sites-enabled/numerology-backend
+```
+
+You must see `server_name backend.mysticnumerology.com;` and inside `location /` the line `proxy_pass http://127.0.0.1:8003;` (not a Strapi port). If not, edit:
+
+```bash
+sudo nano /etc/nginx/sites-available/numerology-backend
+```
+
+Set `proxy_pass http://127.0.0.1:8003;` then:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**3. Fix 502 on backend.mysticnumerology.com**
+
+502 means Nginx could not get a response from the upstream (Numerology FastAPI). Check the backend is running and listening on 8003:
+
+```bash
+sudo systemctl status numerology-backend
+curl -I http://127.0.0.1:8003/health
+```
+
+If the service is stopped: `sudo systemctl start numerology-backend`. If `curl` to 127.0.0.1:8003 fails, fix the app or .env; once `curl http://127.0.0.1:8003/health` returns 200, Nginx (with correct proxy_pass) will stop returning 502.
+
+**4. Fix 500 on admin.mysticnumerology.com**
+
+500 on the frontend usually means wrong `root`, missing files, or permissions. Check the built frontend exists:
+
+```bash
+ls -la /opt/numerology/frontend/dist/
+ls -la /opt/numerology/frontend/dist/index.html
+```
+
+In the Numerology **frontend** Nginx config, `root` must be that directory (e.g. `root /opt/numerology/frontend/dist;`). If the path is different, set `root` to it and run:
+
+```bash
+sudo chmod -R o+x /opt
+sudo chmod -R o+r /opt/numerology/frontend/dist
+```
+
+Check Nginx error log: `sudo tail -30 /var/log/nginx/error.log`. If you never built the frontend on the server: `cd /opt/numerology/frontend && npm ci && npm run build`.
+
+**5. Separation checklist**
+
+| Hostname | Nginx config | Backend / root |
+|----------|--------------|----------------|
+| backend.mysticnumerology.com | numerology-backend | proxy_pass http://127.0.0.1:8003 |
+| admin.mysticnumerology.com | numerology-frontend | root /opt/numerology/frontend/dist |
+| sneha.mysticnumerology.com | numerology-frontend | same root + /api to 127.0.0.1:8003 |
+| fitglide.in / Strapi | other configs only | Strapi port; no mysticnumerology.com |
+
+Do not put backend.mysticnumerology.com or admin.mysticnumerology.com in any Fitglide/Strapi server block.
+
+---
+
+## 12. CORS (if frontend and backend on different origins)
 
 If the browser calls `https://backend.mysticnumerology.com` from `https://admin.mysticnumerology.com` or `https://sneha.mysticnumerology.com`, the backend already allows all origins. To restrict in production, in `backend/main.py` set:
 
@@ -327,7 +496,7 @@ sudo systemctl restart numerology-backend
 
 ---
 
-## 12. Summary checklist
+## 13. Summary checklist
 
 | Step | What |
 |------|------|
@@ -345,7 +514,7 @@ sudo systemctl restart numerology-backend
 
 ---
 
-## 13. URLs for the client
+## 14. URLs for the client
 
 - **Super Admin:** https://admin.mysticnumerology.com/super-admin/login  
 - **Tenant “Sneha” (tenant admin):** https://sneha.mysticnumerology.com/tenant-admin/login  

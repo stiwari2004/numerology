@@ -1,0 +1,20 @@
+# Numerology FastAPI backend – systemd unit
+# Copy to server: sudo cp docs/numerology-backend.service /etc/systemd/system/numerology-backend.service
+# Then: sudo systemctl daemon-reload && sudo systemctl enable numerology-backend && sudo systemctl start numerology-backend
+
+[Unit]
+Description=Numerology FastAPI Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=opsadmin
+Group=opsadmin
+WorkingDirectory=/opt/numerology/backend
+Environment="PATH=/opt/numerology/backend/venv/bin"
+ExecStart=/opt/numerology/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8003
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

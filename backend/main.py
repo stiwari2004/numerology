@@ -64,8 +64,9 @@ async def root():
 
 
 @app.get("/health")
+@app.head("/health")
 async def health():
-    """Health check endpoint"""
+    """Health check endpoint (GET and HEAD for curl -I and load balancers)"""
     return {"status": "healthy"}
 
 
