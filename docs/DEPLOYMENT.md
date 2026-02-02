@@ -2,6 +2,8 @@
 
 This guide gets the app live on your server **without Docker**: backend (FastAPI), frontend (React), PostgreSQL, and Nginx with HTTPS.
 
+**Folder layout:** All apps live under an **OPT** folder (e.g. `fitglide_nextjs`, `fitglide_strapi`). Numerology will sit in **OPT/numerology**—either clone the repo there or create `OPT/numerology` and sync/copy the project into it. In this doc, **OPT** is the full path to that folder (e.g. `/home/deploy/OPT` or `/opt/OPT`). The app root is `$OPT/numerology`.
+
 **Your setup:**
 - **admin.mysticnumerology.com** → Super Admin (you manage tenants)
 - **sneha.mysticnumerology.com** → Tenant “Sneha” (tenant admin + users)
@@ -29,26 +31,25 @@ sudo apt install -y python3 python3-pip python3-venv nodejs npm postgresql postg
 
 ---
 
-## 2. Create app user and directory
+## 2. OPT folder and numerology directory
+
+Use the same user that owns your other OPT apps (or create one). Ensure the **OPT** folder exists, then create the numerology app directory:
 
 ```bash
-sudo useradd -m -s /bin/bash numerology
-sudo su - numerology
-mkdir -p ~/app
-cd ~/app
-```
+# If OPT doesn't exist yet (adjust path to your choice)
+sudo mkdir -p /path/to/OPT
+sudo chown YOUR_USER:YOUR_USER /path/to/OPT
 
----
-
-## 3. Clone the repo and set branch
-
-```bash
+cd /path/to/OPT
+# Create numerology subfolder and clone into it
+mkdir -p numerology
+cd numerology
 git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git .
-# Or: git clone git@github.com:YOUR_USERNAME/YOUR_REPO.git .
+# Or clone into a temp dir then move: git clone ... repo && mv repo/* repo/.[!.]* . && rmdir repo
 git checkout main   # or your branch
 ```
 
-Replace `YOUR_USERNAME/YOUR_REPO` with your actual Git repo.
+Replace `/path/to/OPT` with your real OPT path (e.g. `$HOME/OPT` or `/opt/OPT`), `YOUR_USER` with the user that runs the app, and `YOUR_USERNAME/YOUR_REPO` with your Git repo. The app root is **OPT/numerology** (backend at `OPT/numerology/backend`, frontend at `OPT/numerology/frontend`).
 
 ---
 
@@ -66,11 +67,11 @@ In `psql`:
 CREATE USER numerology_app WITH PASSWORD 'CHOOSE_A_STRONG_PASSWORD';
 CREATE DATABASE numerology_msp OWNER numerology_app;
 \c numerology_msp
-\i /home/numerology/app/backend/database/schema.sql
+\i /path/to/OPT/numerology/backend/database/schema.sql
 \q
 ```
 
-If the schema path differs (e.g. you cloned under a different user), run the SQL file from the correct path, or paste the contents of `backend/database/schema.sql` into `psql` after `\c numerology_msp`.
+Replace `/path/to/OPT` with your actual OPT folder path (e.g. `/home/deploy/OPT`). If the path differs, run the SQL file from the correct path, or paste the contents of `backend/database/schema.sql` into `psql` after `\c numerology_msp`.
 
 Note the password; you’ll use it in the backend `.env`.
 
@@ -78,10 +79,10 @@ Note the password; you’ll use it in the backend `.env`.
 
 ## 5. Backend setup (FastAPI)
 
-As user **numerology**:
+As the user that owns OPT (e.g. **numerology** or your deploy user):
 
 ```bash
-cd ~/app/backend
+cd /path/to/OPT/numerology/backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -116,7 +117,7 @@ From another terminal: `curl http://127.0.0.1:8000/health` → `{"status":"healt
 With backend stopped or from another terminal (and DB reachable):
 
 ```bash
-cd ~/app/backend
+cd /path/to/OPT/numerology/backend
 source venv/bin/activate
 export $(grep -v '^#' .env | xargs)
 
@@ -137,7 +138,7 @@ So the backend runs on boot and restarts on failure:
 sudo nano /etc/systemd/system/numerology-backend.service
 ```
 
-Paste (adjust paths if your app is elsewhere):
+Replace `/path/to/OPT` with your OPT path and `YOUR_APP_USER` with the user that owns OPT/numerology. Paste:
 
 ```ini
 [Unit]
@@ -146,11 +147,11 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-User=numerology
-Group=numerology
-WorkingDirectory=/home/numerology/app/backend
-Environment="PATH=/home/numerology/app/backend/venv/bin"
-ExecStart=/home/numerology/app/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+User=YOUR_APP_USER
+Group=YOUR_APP_USER
+WorkingDirectory=/path/to/OPT/numerology/backend
+Environment="PATH=/path/to/OPT/numerology/backend/venv/bin"
+ExecStart=/path/to/OPT/numerology/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
 
@@ -171,10 +172,10 @@ sudo systemctl status numerology-backend
 
 ## 8. Frontend build (React)
 
-As user **numerology**:
+As the user that owns OPT:
 
 ```bash
-cd ~/app/frontend
+cd /path/to/OPT/numerology/frontend
 npm ci
 npm run build
 ```
@@ -232,7 +233,7 @@ sudo nano /etc/nginx/sites-available/numerology-frontend
 server {
     listen 80;
     server_name admin.mysticnumerology.com sneha.mysticnumerology.com mysticnumerology.com;
-    root /home/numerology/app/frontend/dist;
+    root /path/to/OPT/numerology/frontend/dist;
     index index.html;
     location / {
         try_files $uri $uri/ /index.html;
@@ -262,8 +263,8 @@ sudo systemctl reload nginx
 Give Nginx read access to the frontend files:
 
 ```bash
-sudo chmod -R o+x /home/numerology
-sudo chmod -R o+r /home/numerology/app/frontend/dist
+sudo chmod -R o+x /path/to/OPT
+sudo chmod -R o+r /path/to/OPT/numerology/frontend/dist
 ```
 
 ---
@@ -309,14 +310,14 @@ sudo systemctl restart numerology-backend
 | Step | What |
 |------|------|
 | 1 | Install Python 3, Node, PostgreSQL, Nginx, Certbot |
-| 2 | Create user `numerology`, app dir `~/app` |
-| 3 | Clone repo into `~/app` |
+| 2 | Ensure OPT folder exists; create `OPT/numerology` |
+| 3 | Clone repo into `OPT/numerology` |
 | 4 | Create DB `numerology_msp`, user, run `schema.sql` |
 | 5 | Backend: venv, `pip install`, `.env` (DB, SECRET_KEY, SUBDOMAIN_BASE_DOMAIN, ADMIN_SUBDOMAIN) |
 | 6 | Run `create_super_admin.py`; create tenant **sneha** via Super Admin UI |
 | 7 | Systemd service for uvicorn on 127.0.0.1:8000 |
 | 8 | Frontend: `npm ci` and `npm run build` (with `VITE_API_BASE_URL` if you call backend by hostname) |
-| 9 | Nginx: backend → :8000, frontend → `frontend/dist` for admin/sneha (and `/api` proxy if needed) |
+| 9 | Nginx: backend → :8000, frontend → `OPT/numerology/frontend/dist` for admin/sneha (and `/api` proxy if needed) |
 | 10 | Certbot for HTTPS |
 | 11 | Optional: tighten CORS and restart backend |
 
