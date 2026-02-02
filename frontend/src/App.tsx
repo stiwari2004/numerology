@@ -14,12 +14,26 @@ import { SuperAdminDashboard } from '@/views/pages/SuperAdminDashboard';
 import { ProtectedRoute } from '@/views/components/ProtectedRoute';
 import './index.css';
 
+const ADMIN_HOST = 'admin.mysticnumerology.com';
+
+function LoginRoute() {
+  const isAdminDomain = typeof window !== 'undefined' && window.location.hostname === ADMIN_HOST;
+  if (isAdminDomain) return <Navigate to="/super-admin/login" replace />;
+  return <LoginPage />;
+}
+
+function DefaultRedirect() {
+  const isAdminDomain = typeof window !== 'undefined' && window.location.hostname === ADMIN_HOST;
+  if (isAdminDomain) return <Navigate to="/super-admin/login" replace />;
+  return <Navigate to="/login" replace />;
+}
+
 function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<LoginRoute />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/tenant-admin/login" element={<TenantAdminLoginPage />} />
@@ -52,8 +66,8 @@ function App() {
           }
         />
 
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Default redirect: admin domain -> super-admin login, else -> user login */}
+        <Route path="/" element={<DefaultRedirect />} />
       </Routes>
     </BrowserRouter>
   );
