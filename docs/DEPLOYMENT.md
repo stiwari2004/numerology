@@ -116,7 +116,7 @@ uvicorn main:app --host 127.0.0.1 --port 8003
 
 From another terminal run: `curl http://127.0.0.1:8003/health` (you should see `{"status":"healthy"}`). Then stop the server with Ctrl+C.
 
-**Run the backend continuously (survives SSH disconnect):** Do not rely on a manual uvicorn in a terminal—closing SSH or your terminal will stop it. Use the systemd service in section 7 so the backend runs in the background, restarts on failure, and starts on boot. For a quick test without systemd you can run: `nohup uvicorn main:app --host 127.0.0.1 --port 8003 &` (then `disown` or leave the session open).
+**Run the backend uninterrupted (no PM2, no Docker):** Do not run uvicorn in a terminal for production—Ctrl+C or closing SSH will stop it. Use the **systemd service** in section 7: the backend then runs as a background service, so Ctrl+C in your terminal does nothing to it, and it restarts on failure and on reboot. For a one-off "run in background in this session" you can use: `nohup /path/to/OPT/numerology/backend/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8003 &` and then `disown` (replace path with your backend path).
 
 ---
 
@@ -138,7 +138,14 @@ Start the backend (systemd or manually), then open **https://admin.mysticnumerol
 
 ---
 
-## 7. Backend systemd service (run continuously)
+## 7. Backend systemd service (run continuously, no PM2/Docker)
+
+**Why this fixes "Ctrl+C disconnects the backend":** When you run `uvicorn` in a terminal, that process is attached to your session—so Ctrl+C (or closing SSH) stops it. With **systemd**, the backend runs as a background service: there is no terminal attached, so nothing you do in your SSH session (including Ctrl+C) stops it. No PM2 or Docker required.
+
+- Keeps running after you close SSH or disconnect.
+- Survives server reboots (if you ran `systemctl enable`).
+- Restarts automatically on crash (`Restart=always`).
+- View logs with `journalctl -u numerology-backend -f`.
 
 Use this so the backend keeps running after you close SSH, survives reboots, and restarts on failure:
 
@@ -175,6 +182,19 @@ sudo systemctl enable numerology-backend
 sudo systemctl start numerology-backend
 sudo systemctl status numerology-backend
 ```
+
+**Quick reference (once the service is installed):**
+
+| What you want | Command |
+|---------------|---------|
+| Start backend | `sudo systemctl start numerology-backend` |
+| Stop backend | `sudo systemctl stop numerology-backend` |
+| Restart backend (e.g. after code/.env change) | `sudo systemctl restart numerology-backend` |
+| See if it's running | `sudo systemctl status numerology-backend` |
+| Follow live logs | `journalctl -u numerology-backend -f` |
+| Stop following logs | Ctrl+C (only stops the log view, not the backend) |
+
+The backend process runs under systemd; your terminal is only used to run these commands. So pressing Ctrl+C in your SSH session will not stop the backend.
 
 ---
 
