@@ -65,10 +65,10 @@ def decode_access_token(token: str) -> Dict:
 
 def get_token_from_header(authorization: Optional[str]) -> str:
     """
-    Extract token from Authorization header
+    Extract token from Authorization header or raw token.
     
     Args:
-        authorization: Authorization header value (e.g., "Bearer <token>")
+        authorization: Either "Bearer <token>" or the raw token string (e.g. from HTTPBearer().credentials)
     
     Returns:
         Token string
@@ -76,19 +76,21 @@ def get_token_from_header(authorization: Optional[str]) -> str:
     Raises:
         HTTPException: If header is missing or invalid
     """
-    if not authorization:
+    if not authorization or not authorization.strip():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization header missing",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization header format. Expected: Bearer <token>",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return parts[1]
+    value = authorization.strip()
+    parts = value.split()
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        return parts[1]
+    if len(parts) == 1 and "." in value:
+        return value
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid authorization header format. Expected: Bearer <token>",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
