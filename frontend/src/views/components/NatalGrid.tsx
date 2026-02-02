@@ -55,12 +55,12 @@ export function NatalGrid({
     const digits = cell.split('');
     const totalDigits = digits.length;
     
-    // Check which numbers match this position
-    const matchesAntardasha = antardasha !== null && antardasha === positionNumber;
-    const matchesPratyantar = pratyantar !== null && pratyantar === positionNumber; // PD
-    const matchesMahadasha = mahadasha !== null && mahadasha === positionNumber;
-    const matchesDestiny = destinyNumber !== null && destinyNumber === positionNumber;
-    const matchesRoot = rootNumber !== null && rootNumber === positionNumber;
+    // Check which numbers match this position (handle both null and undefined)
+    const matchesAntardasha = antardasha != null && antardasha === positionNumber;
+    const matchesPratyantar = pratyantar != null && pratyantar === positionNumber; // PD
+    const matchesMahadasha = mahadasha != null && mahadasha === positionNumber;
+    const matchesDestiny = destinyNumber != null && destinyNumber === positionNumber;
+    const matchesRoot = rootNumber != null && rootNumber === positionNumber;
     
     // If no matches, return default
     if (!matchesAntardasha && !matchesPratyantar && !matchesMahadasha && !matchesDestiny && !matchesRoot) {
@@ -117,11 +117,11 @@ export function NatalGrid({
         colorClass = "text-red-600 font-bold"; // Red for MD
       } else {
         // This is a natal digit - check Root or Destiny
-        const digitNum = parseInt(digit);
-        if (matchesDestiny && digitNum === destinyNumber) {
+        // Position matches means this cell is for that number, so all digits here have that value
+        if (matchesDestiny) {
           colorClass = "text-green-600 font-bold"; // Green for Destiny
-        } else if (matchesRoot && digitNum === rootNumber) {
-          colorClass = "text-amber-600 font-bold"; // Amber for Root
+        } else if (matchesRoot) {
+          colorClass = "text-orange-500 font-bold"; // Orange for Root (more visible)
         }
       }
       
@@ -144,7 +144,7 @@ export function NatalGrid({
   };
 
   // Check if any highlights are provided
-  const hasHighlights = rootNumber !== null || destinyNumber !== null || mahadasha !== null || antardasha !== null || pratyantar !== null;
+  const hasHighlights = rootNumber != null || destinyNumber != null || mahadasha != null || antardasha != null || pratyantar != null;
 
   return (
     <div className="space-y-4">
@@ -153,37 +153,37 @@ export function NatalGrid({
       {/* Legend */}
       {hasHighlights && (
         <div className="flex flex-wrap items-center justify-center gap-3 text-xs mb-3">
-          {rootNumber !== null && (
+          {rootNumber != null && (
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-amber-100 border border-amber-400"></div>
+              <div className="w-4 h-4 rounded bg-orange-100 border border-orange-400"></div>
               <span className="text-slate-700">Root: {rootNumber}</span>
             </div>
           )}
-          {destinyNumber !== null && (
+          {destinyNumber != null && (
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 rounded bg-green-100 border border-green-400"></div>
               <span className="text-slate-700">Destiny: {destinyNumber}</span>
             </div>
           )}
-          {mahadasha !== null && (
+          {mahadasha != null && (
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 rounded bg-red-100 border border-red-400"></div>
               <span className="text-slate-700">Maha: {mahadasha}</span>
             </div>
           )}
-          {antardasha !== null && !isPeriod && (
+          {antardasha != null && !isPeriod && (
             <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-blue-900 border border-blue-900"></div>
+              <div className="w-4 h-4 rounded bg-blue-200 border border-blue-400"></div>
               <span className="text-slate-700">Antar: {antardasha}</span>
             </div>
           )}
-          {antardasha !== null && isPeriod && (
+          {antardasha != null && isPeriod && (
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 rounded bg-blue-200 border border-blue-400"></div>
               <span className="text-slate-700">AD: {antardasha}</span>
             </div>
           )}
-          {pratyantar !== null && isPeriod && (
+          {pratyantar != null && isPeriod && (
             <div className="flex items-center gap-1.5">
               <div className="w-4 h-4 rounded bg-purple-100 border border-purple-400"></div>
               <span className="text-slate-700">PD: {pratyantar}</span>
