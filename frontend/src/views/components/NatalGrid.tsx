@@ -88,40 +88,35 @@ export function NatalGrid({
       }
     }
     
+    // Calculate exact positions for special digits (from the end)
+    // Period grids: Natal → MD → AD → PD (so PD last, AD second-to-last, MD third-to-last)
+    // Annual grids: Natal → MD → AD (so AD last, MD second-to-last)
+    // Calculate where each special digit should be (index from start)
+    let pdIndex = -1, adIndex = -1, mdIndex = -1;
+    if (isPeriodGrid) {
+      // Period grid order from end: PD (last), AD (second-to-last), MD (third-to-last)
+      if (matchesPratyantar) pdIndex = totalDigits - 1;
+      if (matchesAntardasha) adIndex = totalDigits - 1 - (matchesPratyantar ? 1 : 0);
+      if (matchesMahadasha) mdIndex = totalDigits - 1 - (matchesPratyantar ? 1 : 0) - (matchesAntardasha ? 1 : 0);
+    } else {
+      // Annual grid order from end: AD (last), MD (second-to-last)
+      if (matchesAntardasha) adIndex = totalDigits - 1;
+      if (matchesMahadasha) mdIndex = totalDigits - 1 - (matchesAntardasha ? 1 : 0);
+    }
+    
     for (let i = 0; i < totalDigits; i++) {
       const digit = digits[i];
-      const isLast = i === totalDigits - 1;
-      const isSecondToLast = i === totalDigits - 2;
-      const isThirdToLast = i === totalDigits - 3;
-      
       let colorClass = "text-slate-800"; // Default
       
-      // Last digit: Pratyantar (PD) for period grids - Purple, or Antardasha for annual grids - Dark blue
-      if (isLast) {
-        if (isPeriodGrid && matchesPratyantar) {
-          colorClass = "text-purple-700 font-bold"; // Purple for PD
-        } else if (!isPeriodGrid && matchesAntardasha) {
-          colorClass = "text-blue-900 font-bold"; // Dark blue for Antardasha
-        }
-      }
-      // Period grid: second-to-last digit = Antardasha (AD) - Blue
-      else if (isPeriodGrid && isSecondToLast && matchesAntardasha && totalDigits >= 2) {
-        colorClass = "text-blue-600 font-bold"; // Blue for AD in period grid
-      }
-      // Annual grid: second-to-last digit = Mahadasha (MD) - Red. Period grid: third-to-last = Mahadasha
-      else if (!isPeriodGrid && isSecondToLast && matchesMahadasha && totalDigits >= 2) {
-        colorClass = "text-red-600 font-bold"; // Red for Mahadasha (annual)
-      }
-      else if (isPeriodGrid && isThirdToLast && matchesMahadasha && totalDigits >= 3) {
-        colorClass = "text-red-600 font-bold"; // Red for Mahadasha in period grid
-      }
-      // If Mahadasha matches position (standalone or in earlier position) - Red
-      else if (matchesMahadasha && positionNumber === mahadasha) {
-        colorClass = "text-red-600 font-bold"; // Red for Mahadasha
-      }
-      // Earlier digits: Natal (Root or Destiny)
-      // Prefer Destiny over Root if both match
-      else {
+      // Check if this index is a special digit position
+      if (i === pdIndex && isPeriodGrid) {
+        colorClass = "text-purple-700 font-bold"; // Purple for PD
+      } else if (i === adIndex) {
+        colorClass = "text-blue-600 font-bold"; // Blue for AD
+      } else if (i === mdIndex) {
+        colorClass = "text-red-600 font-bold"; // Red for MD
+      } else {
+        // This is a natal digit - check Root or Destiny
         const digitNum = parseInt(digit);
         if (matchesDestiny && digitNum === destinyNumber) {
           colorClass = "text-green-600 font-bold"; // Green for Destiny

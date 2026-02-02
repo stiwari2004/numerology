@@ -8,10 +8,57 @@ import { NumberCard } from '@/views/components/NumberCard';
 import { NatalGrid } from '@/views/components/NatalGrid';
 import { YearRangeSelector } from '@/views/components/YearRangeSelector';
 import { NumerologyApiService } from '@/models/api';
-import type { MonthlyGrid } from '@/models/types';
+import type { MonthlyGrid, YearGrid } from '@/models/types';
 import { useState, useMemo } from 'react';
 import { cn } from '@/utils/cn';
-import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, X } from 'lucide-react';
+
+// Helper to format date as dd-mmm-yyyy (e.g., 01-Jan-2024)
+// Handles dd/mm/yyyy format from backend
+function formatDateDDMMMYYYY(dateStr: string): string {
+  if (!dateStr) return '';
+  
+  // If it's a range like "15/01/2024 to 14/02/2024", format both parts
+  if (dateStr.includes(' to ')) {
+    const [start, end] = dateStr.split(' to ');
+    return `${formatSingleDate(start)} to ${formatSingleDate(end)}`;
+  }
+  
+  return formatSingleDate(dateStr);
+}
+
+function formatSingleDate(dateStr: string): string {
+  if (!dateStr) return '';
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  try {
+    // Handle dd/mm/yyyy format from backend
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const year = parts[2];
+        if (monthIdx >= 0 && monthIdx < 12) {
+          return `${day}-${months[monthIdx]}-${year}`;
+        }
+      }
+    }
+    
+    // Fallback: try ISO format
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+    
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+}
 
 export function NumerologyPage() {
   const [birthdate, setBirthdate] = useState('');
@@ -20,6 +67,8 @@ export function NumerologyPage() {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [monthlyGrids, setMonthlyGrids] = useState<Record<number, MonthlyGrid[]>>({});
   const [loadingMonthlyGrids, setLoadingMonthlyGrids] = useState<number | null>(null);
+  // Overlay modal state: which period is selected to show in overlay
+  const [selectedPeriod, setSelectedPeriod] = useState<{ yearGrid: YearGrid; monthGrid: MonthlyGrid } | null>(null);
   const { result, loading, error, calculate, reset } = useNumerology();
 
   const birthYear = useMemo(() => {
@@ -73,6 +122,7 @@ export function NumerologyPage() {
     setExpandedYear(null);
     setMonthlyGrids({});
     setLoadingMonthlyGrids(null);
+    setSelectedPeriod(null);
   };
 
   const handleYearGridClick = async (year: number) => {
@@ -283,66 +333,52 @@ export function NumerologyPage() {
                           </div>
                         </div>
 
-                        {/* Monthly Grids - Expanded View */}
+                        {/* Monthly Grids - Expanded View with clickable cards */}
                         {isExpanded && (
                           <div className="p-6 pt-0 border-t border-slate-200 bg-white">
                             {isLoading ? (
                               <div className="flex items-center justify-center py-10">
                                 <Loader2 className="h-6 w-6 text-slate-500 animate-spin" />
-                                <span className="ml-2 text-sm text-slate-600">Loading monthly grids...</span>
+                                <span className="ml-2 text-sm text-slate-600">Loading period grids...</span>
                               </div>
                             ) : months.length > 0 ? (
                               <div className="space-y-4">
                                 <div className="text-center mb-4">
                                   <h4 className="text-lg font-semibold text-slate-800 mb-1">
-                                    Monthly Grids for {yearGrid.year}
+                                    Period Grids for {yearGrid.year}
                                   </h4>
                                   <p className="text-xs text-slate-600">
-                                    Period breakdowns for this year
+                                    Click any period to view full details
                                   </p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                                   {months.map((monthGrid) => (
-                                    <div
+                                    <button
                                       key={`${monthGrid.year}-${monthGrid.month}`}
-                                      className="bg-white rounded border border-slate-200 p-3 hover:border-slate-300 transition-colors"
+                                      onClick={() => setSelectedPeriod({ yearGrid, monthGrid })}
+                                      className="bg-white rounded-lg border border-slate-200 p-3 hover:border-slate-400 hover:shadow-md transition-all text-left"
                                     >
-                                      <div className="mb-2 pb-2 border-b border-slate-200">
-                                        <h5 className="text-sm font-semibold text-slate-800 mb-1.5">
-                                          {monthGrid.date_range || `${monthGrid.month_name} ${monthGrid.year}`}
-                                        </h5>
-                                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                                          <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 rounded border border-red-200">
-                                            <span className="font-medium text-red-700">MD:</span>
-                                            <span className="text-red-900 font-semibold">{monthGrid.maha_number || 'N/A'}</span>
-                                          </div>
-                                          <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-900 rounded border border-blue-900">
-                                            <span className="font-medium text-white">AD:</span>
-                                            <span className="text-white font-semibold">{yearGrid.antar_number}</span>
-                                          </div>
-                                          <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-50 rounded border border-purple-200">
-                                            <span className="font-medium text-purple-700">PD:</span>
-                                            <span className="text-purple-900 font-semibold">{monthGrid.antar_number}</span>
-                                          </div>
-                                        </div>
+                                      <h5 className="text-xs font-semibold text-slate-800 mb-2 leading-tight">
+                                        {formatDateDDMMMYYYY(monthGrid.date_range || '')}
+                                      </h5>
+                                      <div className="flex flex-wrap items-center gap-1 text-xs">
+                                        <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-medium">
+                                          MD:{monthGrid.maha_number || '?'}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">
+                                          AD:{yearGrid.antar_number}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded font-medium">
+                                          PD:{monthGrid.antar_number}
+                                        </span>
                                       </div>
-                                      <NatalGrid 
-                                        grid={monthGrid.grid} 
-                                        title=""
-                                        rootNumber={result.root_number}
-                                        destinyNumber={result.destiny_number}
-                                        mahadasha={monthGrid.maha_number}
-                                        antardasha={yearGrid.antar_number}
-                                        pratyantar={monthGrid.antar_number}
-                                        isPeriodGrid={true}
-                                      />
-                                    </div>
+                                    </button>
                                   ))}
                                 </div>
                               </div>
                             ) : (
                               <div className="text-center py-8 text-slate-500">
-                                No monthly grids available
+                                No period grids available
                               </div>
                             )}
                           </div>
@@ -362,6 +398,116 @@ export function NumerologyPage() {
               >
                 Calculate Another
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Period Grid Overlay Modal */}
+        {selectedPeriod && result && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center overflow-y-auto py-8">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 my-auto relative">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 rounded-t-xl flex items-center justify-between z-10">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Period Analysis</h2>
+                  <p className="text-sm text-slate-600">
+                    {formatDateDDMMMYYYY(selectedPeriod.monthGrid.date_range || '')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedPeriod(null)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6 text-slate-500" />
+                </button>
+              </div>
+
+              {/* Modal Content - Natal → Annual → Period */}
+              <div className="p-6 space-y-8">
+                {/* Summary badges */}
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200">
+                    <span className="font-medium text-amber-700 text-sm">Root:</span>
+                    <span className="text-amber-900 font-bold text-lg">{result.root_number}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200">
+                    <span className="font-medium text-green-700 text-sm">Destiny:</span>
+                    <span className="text-green-900 font-bold text-lg">{result.destiny_number}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 rounded-lg border border-red-200">
+                    <span className="font-medium text-red-700 text-sm">MD:</span>
+                    <span className="text-red-900 font-bold text-lg">{selectedPeriod.monthGrid.maha_number || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 rounded-lg border border-blue-300">
+                    <span className="font-medium text-blue-700 text-sm">AD:</span>
+                    <span className="text-blue-900 font-bold text-lg">{selectedPeriod.yearGrid.antar_number}</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+                    <span className="font-medium text-purple-700 text-sm">PD:</span>
+                    <span className="text-purple-900 font-bold text-lg">{selectedPeriod.monthGrid.antar_number}</span>
+                  </div>
+                </div>
+
+                {/* Three grids side by side on larger screens */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* 1. Natal Grid */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <h3 className="text-center text-lg font-semibold text-slate-800 mb-3">Natal Grid</h3>
+                    <NatalGrid 
+                      grid={result.natal_grid}
+                      title=""
+                      rootNumber={result.root_number}
+                      destinyNumber={result.destiny_number}
+                      isPeriodGrid={false}
+                    />
+                  </div>
+
+                  {/* 2. Annual Grid */}
+                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                    <h3 className="text-center text-lg font-semibold text-slate-800 mb-1">Annual Grid</h3>
+                    <p className="text-center text-xs text-slate-500 mb-3">
+                      {selectedPeriod.yearGrid.start_year} - {selectedPeriod.yearGrid.end_year}
+                    </p>
+                    <NatalGrid 
+                      grid={selectedPeriod.yearGrid.grid}
+                      title=""
+                      rootNumber={result.root_number}
+                      destinyNumber={result.destiny_number}
+                      mahadasha={selectedPeriod.yearGrid.maha_number}
+                      antardasha={selectedPeriod.yearGrid.antar_number}
+                      isPeriodGrid={false}
+                    />
+                  </div>
+
+                  {/* 3. Period Grid */}
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                    <h3 className="text-center text-lg font-semibold text-slate-800 mb-1">Period Grid</h3>
+                    <p className="text-center text-xs text-slate-500 mb-3">
+                      {formatDateDDMMMYYYY(selectedPeriod.monthGrid.date_range || '')}
+                    </p>
+                    <NatalGrid 
+                      grid={selectedPeriod.monthGrid.grid}
+                      title=""
+                      rootNumber={result.root_number}
+                      destinyNumber={result.destiny_number}
+                      mahadasha={selectedPeriod.monthGrid.maha_number}
+                      antardasha={selectedPeriod.yearGrid.antar_number}
+                      pratyantar={selectedPeriod.monthGrid.antar_number}
+                      isPeriodGrid={true}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-slate-200 px-6 py-4 bg-slate-50 rounded-b-xl">
+                <button
+                  onClick={() => setSelectedPeriod(null)}
+                  className="w-full py-2.5 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
