@@ -55,20 +55,20 @@ export function NumberCard({ label, value, color = 'blue' }: NumberCardProps) {
   
   return (
     <div className={cn(
-      "p-5 rounded-lg border",
+      "p-2 rounded-lg border flex items-center gap-2",
       config.bg,
       config.border
     )}>
-      <div className={cn("text-xs font-medium uppercase tracking-wide mb-3", config.text)}>
-        {label}
-      </div>
       <div className={cn(
-        "inline-flex items-center justify-center w-16 h-16 rounded-lg",
+        "flex items-center justify-center w-10 h-10 rounded-lg",
         config.valueBg,
         config.valueText,
-        "text-3xl font-semibold"
+        "text-xl font-bold"
       )}>
         {value}
+      </div>
+      <div className={cn("text-xs font-medium", config.text)}>
+        {label}
       </div>
     </div>
   );

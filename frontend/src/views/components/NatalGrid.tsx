@@ -147,52 +147,31 @@ export function NatalGrid({
   const hasHighlights = rootNumber != null || destinyNumber != null || mahadasha != null || antardasha != null || pratyantar != null;
 
   return (
-    <div className="space-y-4">
-      {title && <h2 className="text-xl font-semibold text-slate-900">{title}</h2>}
+    <div className="space-y-1">
+      {title && <h3 className="text-sm font-semibold text-slate-700 text-center">{title}</h3>}
       
-      {/* Legend */}
+      {/* Compact Legend */}
       {hasHighlights && (
-        <div className="flex flex-wrap items-center justify-center gap-3 text-xs mb-3">
+        <div className="flex flex-wrap items-center justify-center gap-1.5 text-[10px] mb-1">
           {rootNumber != null && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-orange-100 border border-orange-400"></div>
-              <span className="text-slate-700">Root: {rootNumber}</span>
-            </div>
+            <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded border border-orange-300">R:{rootNumber}</span>
           )}
           {destinyNumber != null && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-green-100 border border-green-400"></div>
-              <span className="text-slate-700">Destiny: {destinyNumber}</span>
-            </div>
+            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded border border-green-300">D:{destinyNumber}</span>
           )}
           {mahadasha != null && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-red-100 border border-red-400"></div>
-              <span className="text-slate-700">Maha: {mahadasha}</span>
-            </div>
+            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded border border-red-300">M:{mahadasha}</span>
           )}
-          {antardasha != null && !isPeriod && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-blue-200 border border-blue-400"></div>
-              <span className="text-slate-700">Antar: {antardasha}</span>
-            </div>
-          )}
-          {antardasha != null && isPeriod && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-blue-200 border border-blue-400"></div>
-              <span className="text-slate-700">AD: {antardasha}</span>
-            </div>
+          {antardasha != null && (
+            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded border border-blue-300">A:{antardasha}</span>
           )}
           {pratyantar != null && isPeriod && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-purple-100 border border-purple-400"></div>
-              <span className="text-slate-700">PD: {pratyantar}</span>
-            </div>
+            <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded border border-purple-300">P:{pratyantar}</span>
           )}
         </div>
       )}
       
-      <div className="grid grid-cols-3 gap-2 max-w-sm mx-auto p-3 bg-slate-100 rounded-lg border border-slate-200">
+      <div className="grid grid-cols-3 gap-1 max-w-[180px] mx-auto p-2 bg-slate-100 rounded border border-slate-200">
         {grid.map((row, rowIdx) => (
           row.map((cell, colIdx) => (
             <div
@@ -200,7 +179,7 @@ export function NatalGrid({
               className={cn(
                 "aspect-square border rounded",
                 "flex items-center justify-center",
-                "text-lg font-semibold",
+                "text-sm font-semibold",
                 "bg-white border-slate-200"
               )}
             >

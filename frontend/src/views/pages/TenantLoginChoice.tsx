@@ -2,16 +2,55 @@
  * Tenant subdomain landing: choose User Login or Tenant Admin Login
  */
 
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, Shield, User } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+interface TenantBranding {
+  logo_url?: string | null;
+  company_name?: string;
+}
 
 export function TenantLoginChoice() {
+  const [branding, setBranding] = useState<TenantBranding | null>(null);
+
+  // Fetch tenant branding (logo) on mount
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/v1/tenant/info`);
+        setBranding({
+          logo_url: res.data.logo_url,
+          company_name: res.data.company_name,
+        });
+      } catch {
+        // Ignore errors - branding is optional
+      }
+    };
+    fetchBranding();
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-slate-200 p-8">
         <div className="text-center mb-8">
+          {/* Tenant Logo - Fixed 120x120px */}
+          {branding?.logo_url && (
+            <div className="mb-4 flex justify-center">
+              <div className="w-[120px] h-[120px] flex items-center justify-center">
+                <img 
+                  src={branding.logo_url} 
+                  alt={branding.company_name || 'Logo'} 
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            </div>
+          )}
           <h1 className="text-2xl font-semibold text-slate-900 mb-2">
-            Welcome
+            {branding?.company_name || 'Welcome'}
           </h1>
           <p className="text-slate-600 text-sm">
             Choose how you want to sign in

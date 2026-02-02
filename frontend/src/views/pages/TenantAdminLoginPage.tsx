@@ -2,17 +2,42 @@
  * Tenant Admin Login Page Component
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthApiService } from '@/models/authApi';
 import { LogIn, Mail, Lock, AlertCircle, Shield } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+interface TenantBranding {
+  logo_url?: string | null;
+  company_name?: string;
+}
 
 export function TenantAdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [branding, setBranding] = useState<TenantBranding | null>(null);
   const navigate = useNavigate();
+
+  // Fetch tenant branding (logo) on mount
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/v1/tenant/info`);
+        setBranding({
+          logo_url: res.data.logo_url,
+          company_name: res.data.company_name,
+        });
+      } catch {
+        // Ignore errors - branding is optional
+      }
+    };
+    fetchBranding();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,11 +64,24 @@ export function TenantAdminLoginPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-slate-200 p-8">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full mb-4">
-            <Shield className="w-6 h-6 text-slate-700" />
-          </div>
+          {/* Tenant Logo - Fixed 120x120px */}
+          {branding?.logo_url ? (
+            <div className="mb-4 flex justify-center">
+              <div className="w-[120px] h-[120px] flex items-center justify-center">
+                <img 
+                  src={branding.logo_url} 
+                  alt={branding.company_name || 'Logo'} 
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-100 rounded-full mb-4">
+              <Shield className="w-6 h-6 text-slate-700" />
+            </div>
+          )}
           <h1 className="text-2xl font-semibold text-slate-900 mb-2">
-            Tenant Admin Login
+            {branding?.company_name ? `${branding.company_name} Admin` : 'Tenant Admin Login'}
           </h1>
           <p className="text-slate-600 text-sm">
             Sign in to manage your tenant

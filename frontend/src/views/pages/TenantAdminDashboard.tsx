@@ -13,7 +13,9 @@ import {
   X,
   Check,
   KeyRound,
-  Pencil
+  Pencil,
+  Image,
+  Upload
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -41,6 +43,7 @@ interface TenantInfo {
   company_name: string;
   purchased_user_licenses: number;
   license_usage?: LicenseUsage;
+  logo_url?: string | null;
 }
 
 export function TenantAdminDashboard() {
@@ -67,6 +70,9 @@ export function TenantAdminDashboard() {
     is_active: true,
     is_admin: false,
   });
+  const [showLogoModal, setShowLogoModal] = useState(false);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [savingLogo, setSavingLogo] = useState(false);
 
   useEffect(() => {
     const token = AuthApiService.getAuthToken();
@@ -104,6 +110,7 @@ export function TenantAdminDashboard() {
         company_name: tenantRes.data.company_name,
         purchased_user_licenses: tenantRes.data.purchased_user_licenses,
         license_usage: tenantRes.data.license_usage,
+        logo_url: tenantRes.data.logo_url,
       });
 
       // Load users
@@ -247,6 +254,32 @@ export function TenantAdminDashboard() {
     navigate('/tenant-admin/login');
   };
 
+  const openLogoModal = () => {
+    setLogoUrl(tenantInfo?.logo_url || '');
+    setShowLogoModal(true);
+  };
+
+  const handleSaveLogo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingLogo(true);
+    setError(null);
+    try {
+      const token = AuthApiService.getAuthToken();
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.put(
+        `${API_BASE_URL}/api/v1/tenant/config`,
+        { logo_url: logoUrl || null },
+        { headers }
+      );
+      setShowLogoModal(false);
+      loadDashboardData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update logo');
+    } finally {
+      setSavingLogo(false);
+    }
+  };
+
   // License stats: only non-admin users consume licenses (from backend license_usage)
   const usedLicenses = tenantInfo?.license_usage?.used_licenses ?? 0;
   const availableLicenses = tenantInfo?.license_usage?.available_licenses ?? 0;
@@ -347,6 +380,45 @@ export function TenantAdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* Branding Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-900">Branding</h2>
+            <button
+              onClick={openLogoModal}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              <span>{tenantInfo?.logo_url ? 'Change Logo' : 'Add Logo'}</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-24 h-24 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden">
+              {tenantInfo?.logo_url ? (
+                <img 
+                  src={tenantInfo.logo_url} 
+                  alt="Company Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <Image className="w-8 h-8 text-slate-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-slate-600">Company Logo</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {tenantInfo?.logo_url 
+                  ? 'Logo will appear on the login page' 
+                  : 'No logo set. Add one to display on login page.'}
+              </p>
+              <p className="text-xs text-slate-400">Fixed display size: 120px × 120px</p>
+            </div>
+          </div>
+        </div>
 
         {/* Users Section */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
@@ -546,6 +618,76 @@ export function TenantAdminDashboard() {
                   className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800"
                 >
                   Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Logo Upload Modal */}
+      {showLogoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Update Company Logo</h3>
+              <button
+                onClick={() => setShowLogoModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveLogo} className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Logo URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/logo.png"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Enter the URL of your logo image. Recommended: PNG or JPG, square format.
+                </p>
+              </div>
+              
+              {/* Preview */}
+              {logoUrl && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Preview</label>
+                  <div className="w-[120px] h-[120px] bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden mx-auto">
+                    <img 
+                      src={logoUrl} 
+                      alt="Logo Preview" 
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '';
+                        (e.target as HTMLImageElement).alt = 'Invalid URL';
+                      }}
+                    />
+                  </div>
+                  <p className="text-center text-xs text-slate-500 mt-1">120px × 120px (fixed size)</p>
+                </div>
+              )}
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowLogoModal(false)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-md hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingLogo}
+                  className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {savingLogo ? 'Saving...' : 'Save Logo'}
                 </button>
               </div>
             </form>
